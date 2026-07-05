@@ -154,6 +154,13 @@
             background: #f1f5f9;
             border-color: #94a3b8;
         }
+        /* 選択肢が選ばれているときのスタイル */
+        .choice-button.selected {
+            background: #ebf8ff;
+            border-color: #4299e1;
+            color: #2b6cb0;
+            box-shadow: 0 0 0 1px #4299e1;
+        }
         .choice-button.correct {
             background: #d1fae5;
             border-color: #10b981;
@@ -165,6 +172,31 @@
             color: #991b1b;
         }
         
+        /* ボタン類のエリア */
+        .action-area {
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .submit-btn:hover { background: #2980b9; }
+        .submit-btn:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
         /* 解説エリア */
         #result-area {
             margin-top: 25px;
@@ -242,7 +274,6 @@
         <p style="text-align: center; color: #64748b;">解きたい問題を選んでね！</p>
         <div id="quiz-list-container"></div>
         
-        <!-- JavaScriptがここへ自動的にリセットボタンを生成して挿入します -->
         <div id="dynamic-reset-container"></div>
     </div>
 
@@ -255,6 +286,11 @@
         <div class="text-section" id="quiz-text"></div>
         <div class="question-section" id="quiz-question"></div>
         <div id="quiz-choices"></div>
+        
+        <!-- 👇 追加：解答決定ボタン -->
+        <div class="action-area">
+            <button id="submit-answer-btn" class="submit-btn" onclick="submitAnswer()" disabled>👉 解答を決定する</button>
+        </div>
         
         <!-- 正誤判定・解説エリア -->
         <div id="result-area">
@@ -331,6 +367,8 @@
     let currentQuiz = null;
     let hasAnswered = false;
     let clearedQuizzes = [];
+    let selectedChoiceText = ""; // 選択中のテキストを保持
+    let selectedButtonElement = null; // 選択中のボタン要素を保持
 
     function parseExcelData() {
         const rawText = document.getElementById('excel-data').textContent;
@@ -404,7 +442,6 @@
             container.appendChild(button);
         });
 
-        // 💡 確実にボタンを表示させるため、JavaScript側からHTMLをねじ込みます
         const resetContainer = document.getElementById('dynamic-reset-container');
         if (resetContainer) {
             resetContainer.innerHTML = `
@@ -418,6 +455,8 @@
     function startQuiz(index) {
         currentQuiz = quizData[index];
         hasAnswered = false;
+        selectedChoiceText = "";
+        selectedButtonElement = null;
         
         document.getElementById('home-screen').classList.remove('active');
         document.getElementById('quiz-screen').classList.add('active');
@@ -425,6 +464,12 @@
         document.getElementById('quiz-info').innerText = `第 ${currentQuiz.id} 問 【${currentQuiz.pattern} / 難易度：${currentQuiz.level}】`;
         document.getElementById('quiz-text').innerText = currentQuiz.text;
         document.getElementById('quiz-question').innerText = currentQuiz.question;
+        
+        // 決定ボタンの状態を初期化（無効化）
+        const submitBtn = document.getElementById('submit-answer-btn');
+        submitBtn.style.display = 'block';
+        submitBtn.disabled = true;
+        
         document.getElementById('result-area').style.display = 'none';
         
         const choicesContainer = document.getElementById('quiz-choices');
@@ -439,17 +484,47 @@
         });
     }
 
-    function selectChoice(selectedBtn, choiceText) {
+    // 選択肢をタップした時の処理（まだ正誤判定はしない）
+    function selectChoice(btn, choiceText) {
         if (hasAnswered) return;
+        
+        // すべての選択肢の選択状態（青枠）を一度クリア
+        const allButtons = document.getElementById('quiz-choices').getElementsByClassName('choice-button');
+        for (let b of allButtons) {
+            b.classList.remove('selected');
+        }
+        
+        // タップされたボタンを選択状態にする
+        btn.classList.add('selected');
+        
+        // 選択データをキープ
+        selectedChoiceText = choiceText;
+        selectedButtonElement = btn;
+        
+        // 解答決定ボタンを押せるようにする
+        document.getElementById('submit-answer-btn').disabled = false;
+    }
+
+    // 「解答を決定する」ボタンを押したときの処理（ここで正誤判定！）
+    function submitAnswer() {
+        if (hasAnswered || !selectedButtonElement) return;
         hasAnswered = true;
         
-        const isCorrect = choiceText.startsWith(currentQuiz.answer);
+        // 決定ボタン自体を無効化して隠す
+        const submitBtn = document.getElementById('submit-answer-btn');
+        submitBtn.disabled = true;
+        submitBtn.style.display = 'none';
+        
+        const isCorrect = selectedChoiceText.startsWith(currentQuiz.answer);
         const resultArea = document.getElementById('result-area');
         const resultTitle = document.getElementById('result-title');
         const allButtons = document.getElementById('quiz-choices').getElementsByClassName('choice-button');
         
+        // 選択状態の青枠クラスを消去
+        selectedButtonElement.classList.remove('selected');
+        
         if (isCorrect) {
-            selectedBtn.classList.add('correct');
+            selectedButtonElement.classList.add('correct');
             resultTitle.innerText = '⭕ 正解！';
             resultTitle.className = 'result-title correct-text';
             
@@ -458,10 +533,11 @@
                 localStorage.setItem('dokkai_cleared_list', JSON.stringify(clearedQuizzes));
             }
         } else {
-            selectedBtn.classList.add('wrong');
+            selectedButtonElement.classList.add('wrong');
             resultTitle.innerText = '❌ 不正解...';
             resultTitle.className = 'result-title wrong-text';
             
+            // 間違っていた場合、正しい答えのボタンを緑色にする
             for (let btn of allButtons) {
                 if (btn.innerText.startsWith(currentQuiz.answer)) {
                     btn.classList.add('correct');
