@@ -203,6 +203,29 @@
             margin-top: 20px;
         }
         .nav-btn:hover { background: #475569; }
+
+        /* リセットボタン用のスタイル */
+        .reset-btn-container {
+            text-align: center;
+            margin-top: 30px;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 20px;
+        }
+        .reset-btn {
+            background-color: #fff;
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            background-color: #fdf2f2;
+            box-shadow: 0 2px 6px rgba(231, 76, 60, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -220,6 +243,11 @@
         </div>
         <p style="text-align: center; color: #64748b;">解きたい問題を選んでね！</p>
         <div id="quiz-list-container"></div>
+
+        <!-- 👇 追加：リセットボタンエリア -->
+        <div class="reset-btn-container">
+            <button class="reset-btn" onclick="resetProgress()">🔄 取り組み状況をリセットする</button>
+        </div>
     </div>
 
     <!-- 2. 問題画面 -->
@@ -308,7 +336,7 @@
     let hasAnswered = false;
     let clearedQuizzes = [];
 
-    // Excelデータを解析する関数（列の順番が1つずつズレたので、インデックスを調整）
+    // Excelデータを解析する関数
     function parseExcelData() {
         const rawText = document.getElementById('excel-data').textContent;
         if (!rawText || !rawText.trim()) return [];
@@ -322,12 +350,11 @@
             if (lines[i].startsWith('/*') || lines[i].startsWith('問題番号') || lines[i].trim() === ';') continue;
             
             const columns = lines[i].split('\t');
-            // 列数が難易度追加により11列に増えたため、11列以上を正常データとしてカウント
             if (columns.length >= 11) {
                 data.push({
                     id: columns[0].trim(),
                     pattern: columns[1].trim(),
-                    level: columns[2].trim(), // 新設された「難易度」列を取得
+                    level: columns[2].trim(),
                     text: columns[3].trim().replace(/\\n/g, '\n'),
                     question: columns[4].trim(),
                     choices: [columns[5].trim(), columns[6].trim(), columns[7].trim(), columns[8].trim()],
@@ -371,8 +398,6 @@
             const isCleared = clearedQuizzes.includes(quiz.id);
             const check = isCleared ? '✅' : '';
             
-            // 難易度の文字列（初級・中級・上級）をそのままCSSのクラス名として利用します
-            // もしそれ以外の文字が入った場合はデフォルトグレーになります
             const levelClass = (quiz.level === '初級' || quiz.level === '中級' || quiz.level === '上級') ? quiz.level : 'default-level';
             
             button.innerHTML = `
@@ -451,6 +476,17 @@
         document.getElementById('quiz-screen').classList.remove('active');
         document.getElementById('home-screen').classList.add('active');
         initQuizList();
+    }
+
+    // 👇 追加：進捗をリセットする関数
+    function resetProgress() {
+        const confirmReset = confirm("これまでに解いた記録（✅マークと達成率）をすべて消去して、最初からやり直しますか？");
+        if (confirmReset) {
+            clearedQuizzes = []; // 配列を空にする
+            localStorage.removeItem('dokkai_cleared_list'); // ブラウザの保存データを削除
+            initQuizList(); // 画面を更新
+            alert("取り組み状況をリセットしました。");
+        }
     }
 
     window.onload = function() {
