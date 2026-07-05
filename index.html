@@ -39,7 +39,7 @@
             border: 1px solid #e2e8f0;
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             text-align: center;
         }
         .progress-text {
@@ -60,6 +60,26 @@
             height: 100%;
             width: 0%;
             transition: width 0.5s ease-out;
+        }
+
+        /* 👑 メッセージボードの見た目設定 */
+        .teacher-message-board {
+            background-color: #fffde7; /* ほんのり優しい黄色 */
+            border: 2px dashed #f1c40f;   /* 黄色の点線枠 */
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 15px;
+            color: #7f8c8d;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .teacher-title {
+            font-weight: bold;
+            color: #d35400; /* オレンジ色のタイトル */
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         /* ホーム画面 */
@@ -154,7 +174,6 @@
             background: #f1f5f9;
             border-color: #94a3b8;
         }
-        /* 選択肢が選ばれているときのスタイル */
         .choice-button.selected {
             background: #ebf8ff;
             border-color: #4299e1;
@@ -265,12 +284,28 @@
 
     <!-- 1. ホーム画面（問題選択） -->
     <div id="home-screen" class="screen active">
+        <!-- 達成率表示エリア -->
         <div class="progress-container">
             <div id="progress-text" class="progress-text">現在の達成率：0 / 0問 (0%)</div>
             <div class="progress-bar-bg">
                 <div id="progress-bar-fill" class="progress-bar-fill"></div>
             </div>
         </div>
+
+        <div class="teacher-message-board">
+            <div class="teacher-title">📢 メッセージ</div>
+            <div id="teacher-text" style="white-space: pre-wrap; font-weight: 500; color: #34495e;">
+            <!-- ========================================================
+             👇【メッセージ】ここを書き換えて更新してね！
+             ======================================================== -->
+問題を50問に増やしたよ。1～20が初級、21～40が中級、41～50が上級。
+全部終わったら問題追加するから言ってね。兄（7/5）
+            <!-- ========================================================
+             👆【メッセージ】ここまで
+             ======================================================== -->
+            </div>
+        </div>
+
         <p style="text-align: center; color: #64748b;">解きたい問題を選んでね！</p>
         <div id="quiz-list-container"></div>
         
@@ -287,7 +322,7 @@
         <div class="question-section" id="quiz-question"></div>
         <div id="quiz-choices"></div>
         
-        <!-- 👇 追加：解答決定ボタン -->
+        <!-- 解答決定ボタン -->
         <div class="action-area">
             <button id="submit-answer-btn" class="submit-btn" onclick="submitAnswer()" disabled>👉 解答を決定する</button>
         </div>
@@ -367,8 +402,8 @@
     let currentQuiz = null;
     let hasAnswered = false;
     let clearedQuizzes = [];
-    let selectedChoiceText = ""; // 選択中のテキストを保持
-    let selectedButtonElement = null; // 選択中のボタン要素を保持
+    let selectedChoiceText = "";
+    let selectedButtonElement = null;
 
     function parseExcelData() {
         const rawText = document.getElementById('excel-data').textContent;
@@ -465,7 +500,6 @@
         document.getElementById('quiz-text').innerText = currentQuiz.text;
         document.getElementById('quiz-question').innerText = currentQuiz.question;
         
-        // 決定ボタンの状態を初期化（無効化）
         const submitBtn = document.getElementById('submit-answer-btn');
         submitBtn.style.display = 'block';
         submitBtn.disabled = true;
@@ -484,33 +518,25 @@
         });
     }
 
-    // 選択肢をタップした時の処理（まだ正誤判定はしない）
     function selectChoice(btn, choiceText) {
         if (hasAnswered) return;
         
-        // すべての選択肢の選択状態（青枠）を一度クリア
         const allButtons = document.getElementById('quiz-choices').getElementsByClassName('choice-button');
         for (let b of allButtons) {
             b.classList.remove('selected');
         }
         
-        // タップされたボタンを選択状態にする
         btn.classList.add('selected');
-        
-        // 選択データをキープ
         selectedChoiceText = choiceText;
         selectedButtonElement = btn;
         
-        // 解答決定ボタンを押せるようにする
         document.getElementById('submit-answer-btn').disabled = false;
     }
 
-    // 「解答を決定する」ボタンを押したときの処理（ここで正誤判定！）
     function submitAnswer() {
         if (hasAnswered || !selectedButtonElement) return;
         hasAnswered = true;
         
-        // 決定ボタン自体を無効化して隠す
         const submitBtn = document.getElementById('submit-answer-btn');
         submitBtn.disabled = true;
         submitBtn.style.display = 'none';
@@ -520,7 +546,6 @@
         const resultTitle = document.getElementById('result-title');
         const allButtons = document.getElementById('quiz-choices').getElementsByClassName('choice-button');
         
-        // 選択状態の青枠クラスを消去
         selectedButtonElement.classList.remove('selected');
         
         if (isCorrect) {
@@ -537,7 +562,6 @@
             resultTitle.innerText = '❌ 不正解...';
             resultTitle.className = 'result-title wrong-text';
             
-            // 間違っていた場合、正しい答えのボタンを緑色にする
             for (let btn of allButtons) {
                 if (btn.innerText.startsWith(currentQuiz.answer)) {
                     btn.classList.add('correct');
